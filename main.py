@@ -8,8 +8,8 @@ from plotly.subplots import make_subplots
 
 ### FORMATTING
 st.set_page_config(page_title="TC's Opt Screen", layout="wide")
-#st.header("Welcome to TC's Option Screener")
-st.write('Hello, *World!* :sunglasses:')
+st.sidebar.header("TC's Option Screener :sunglasses:")
+# st.write('Hello, *World!* :sunglasses:')
 
 # askdfjhka
 
@@ -39,6 +39,8 @@ def get_hist(ticker):
         threads=True,
         # proxy URL scheme use use when downloading?
         proxy=None)
+    if df_hist.empty:
+        raise NameError("You did not input a correct stock ticker! Try again.")
 
     df_hist = df_hist['Close'].to_frame()
     df_hist = df_hist.rename(columns={'Close':ticker})
@@ -75,7 +77,7 @@ def plot_payoff():
     fig = make_subplots(rows=2, cols=2, shared_xaxes=True, shared_yaxes=True,
                         vertical_spacing=0.015, horizontal_spacing=0.01,
                         row_heights=[2, 1], column_widths=[8, 2],
-                        column_titles=[f'{long_short} {lots} lots of <br>{exp_date} {ticker} {strike} strike {strategy}s @ {str(lastPrice)}', f'Premium Paid = {lots * mult * lastPrice:,.0f}'],
+                        column_titles=[f'<b>{long_short} {lots} lots of <br>{exp_date}  {ticker}  {strike}  strike  {strategy}s  @  {str(lastPrice)}', f'Premium Paid = {lots * mult * lastPrice:,.0f}'],
                         row_titles=['Profit & Loss', 'Rolling Ret & Backtest'])
 
     fig.add_trace(go.Scatter(x=df_hist.index, y=df_hist[ticker],
@@ -135,18 +137,12 @@ def plot_payoff():
 
 ### BODY
 
-col1, col2 = st.columns([2,10])
+ticker = st.sidebar.text_input('Enter US stock ticker','AAPL')
 
-with col1:
-    ticker = st.selectbox('Pick stock',(ticker_list))
+#     if (yf.Ticker(ticker).info['regularMarketPrice'] == None):
+#         raise NameError("You did not input a correct stock ticker! Try again.")
 
 df_hist = get_hist(ticker)
-
-with col2:
-    st.write('')
-    st.write('')
-    st.write(f'{ticker} *ref px* = {df_hist.iloc[0][0]:.2f}')
-
 
 exp_dates = get_exp_dates(ticker)
 exp_date = st.sidebar.selectbox('Pick exp date', exp_dates)
@@ -160,11 +156,11 @@ call_chain, put_chain = get_chains(ticker)
 strategy = st.sidebar.radio('Strategy', ('Call', 'Put'))
 
 if strategy == 'Call':
-    strike = st.sidebar.selectbox('select strike', (call_chain['strike'].tolist()))
+    strike = st.sidebar.selectbox(f'Select strike (ref px = {df_hist.iloc[0][0]:.2f})', (call_chain['strike'].tolist()))
     i = call_chain[call_chain['strike']==strike].index[0]
     strike, lastPrice, impliedVolatility, pcf = call_chain.loc[i][['strike','lastPrice', 'impliedVolatility', 'pcf']].tolist()
 else:
-    strike = st.sidebar.selectbox('Select strike', (put_chain['strike'].tolist()))
+    strike = st.sidebar.selectbox(f'Select strike (ref px = {df_hist.iloc[0][0]:.2f})', (put_chain['strike'].tolist()))
     i = put_chain[put_chain['strike']==strike].index[0]
     strike, lastPrice, impliedVolatility, pcf = put_chain.loc[i][['strike','lastPrice', 'impliedVolatility', 'pcf']].tolist()
 
@@ -174,7 +170,7 @@ if long_short == 'Long':
 else:
     ls = -1
 
-lots = st.sidebar.select_slider('N of lots', [1, 5, 10, 20, 50, 100]) * ls
+lots = st.sidebar.select_slider('N of lots', [1, 5, 10, 20, 50, 100], 10) * ls
 mult = 100
 
 fig = plot_payoff()
