@@ -135,7 +135,7 @@ def plot_payoff():
 
 ### BODY
 
-col1, col2 = st.beta_columns([2,10])
+col1, col2 = st.columns([2,10])
 
 with col1:
     ticker = st.selectbox('Pick stock',(ticker_list))
@@ -143,6 +143,8 @@ with col1:
 df_hist = get_hist(ticker)
 
 with col2:
+    st.write('')
+    st.write('')
     st.write(f'{ticker} *ref px* = {df_hist.iloc[0][0]:.2f}')
 
 
