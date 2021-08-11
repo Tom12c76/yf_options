@@ -3,5 +3,5 @@ streamlit>=0.75.0
 pandas>=0.25.1
 plotly>=4.14.3
 numpy>=1.16.5
-datetime>=4.3
+datetime==4.3
 

@@ -112,8 +112,8 @@ def plot_payoff():
 
         fig.add_trace(go.Scatter(
             x=[df_hist.index.min(), exp_date],
-            y=[(strike + i * pcf * lastPrice) / df_hist[ticker][today_date] - 1,
-               (strike + i * pcf * lastPrice) / df_hist[ticker][today_date] - 1],
+            y=[(strike + i * pcf * lastPrice) / df_hist[ticker].iloc[-1] - 1,
+               (strike + i * pcf * lastPrice) / df_hist[ticker].iloc[-1] - 1],
             showlegend=False, mode='lines', opacity=o, line={'color': color, 'width': w, 'dash': 'dashdot'}), row=2, col=1)
 
     fig.add_trace(go.Scatter(x=np.multiply([-1, -1, 0, 1, 2, 3], lastPrice) * lots * mult,
