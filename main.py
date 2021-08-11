@@ -110,11 +110,11 @@ def plot_payoff():
             showlegend=False,
             name=f'{i}x Premium', opacity=o, line={'color': color, 'width': w, 'dash': 'dashdot'}), row=1, col=2)
 
-        # fig.add_trace(go.Scatter(
-        #     x=[df_hist.index.min(), exp_date],
-        #     y=[(strike + i * pcf * lastPrice) / df_hist[ticker][today_date] - 1,
-        #        (strike + i * pcf * lastPrice) / df_hist[ticker][today_date] - 1],
-        #     showlegend=False, mode='lines', opacity=o, line={'color': color, 'width': w, 'dash': 'dashdot'}), row=2, col=1)
+        fig.add_trace(go.Scatter(
+            x=[df_hist.index.min(), exp_date],
+            y=[(strike + i * pcf * lastPrice) / df_hist[ticker][today_date] - 1,
+               (strike + i * pcf * lastPrice) / df_hist[ticker][today_date] - 1],
+            showlegend=False, mode='lines', opacity=o, line={'color': color, 'width': w, 'dash': 'dashdot'}), row=2, col=1)
 
     fig.add_trace(go.Scatter(x=np.multiply([-1, -1, 0, 1, 2, 3], lastPrice) * lots * mult,
                              y=strike + np.multiply([-4, 0, 1, 2, 3, 4], pcf) * lastPrice,
