@@ -221,10 +221,14 @@ else:
 opt_hist = calc_opt_hist()
 
 i = opt_hist.index.get_loc(tx_date.isoformat(), method='nearest')
-tx_price_suggest = round(opt_hist.iloc[i][2], 2)
+st.write(opt_hist.index)
+st.write(tx_date)
+st.write(opt_hist.index.get_loc(tx_date, method='nearest'))
+#tx_price_suggest = round(opt_hist.iloc[i][2], 2)
+tx_price_suggest = 1.0
 tx_price = st.sidebar.number_input('Trans price override', min_value=0.01, max_value=None, value=max(tx_price_suggest,0.01))
 
-fig = plot_payoff()
-st.plotly_chart(fig)
+# fig = plot_payoff()
+# st.plotly_chart(fig)
 
 st.write(f'Stock summary on [yahoo!] (https://finance.yahoo.com/quote/{ticker})')
