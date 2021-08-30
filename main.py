@@ -109,12 +109,11 @@ def plot_payoff():
     fig.add_trace(go.Scatter(x=stock_hist.index, y=stock_hist[ticker],
                              name=ticker, connectgaps=True, line={'color': snsblue, 'width': 2.5}, opacity=0.8), row=1, col=1)
 
-    fig.add_trace(go.Scatter(
-        x=stock_hist[::-1].index, y=stock_hist[ticker][::-1].rolling(td2e).mean(),
-        name=str(td2e)+' td SMA',line={'color':snsgrey,'width':1}),row=1,col=1)
+    fig.add_trace(go.Scatter(x=stock_hist[::-1].index, y=stock_hist[ticker][::-1].rolling(td2e).mean(),
+                             name=str(td2e)+' td SMA',line={'color':snsgrey,'width':1}),row=1,col=1)
 
-    fig.add_trace(go.Scatter(x=opt_hist.index, y=strike + opt_hist['bs']*pcf,
-                             name='BS approx', connectgaps=True, line={'color': snsorange, 'width': 2.5}, opacity=0.4), row=1, col=1)
+    fig.add_trace(go.Scatter(x=opt_hist[opt_hist['cd2e'] <= (cd2e+20)].index, y=strike + opt_hist[opt_hist['cd2e'] <= (cd2e+20)]['bs']*pcf,
+                             name='BS approx', connectgaps=True, mode='lines', line={'color': snsorange, 'width': 2.5}, opacity=0.4), row=1, col=1)
 
     for i, w, o in zip(irange, width, opacity):
 
@@ -185,6 +184,7 @@ exp_date = datetime.datetime.strptime(exp_date, '%Y-%m-%d').date()
 strategy = st.sidebar.radio('Strategy', ('Call', 'Put'))
 hide_itm = st.sidebar.checkbox('Hide ITM strikes', value=True)
 call_chain, put_chain = get_chains(ticker)
+
 if strategy == 'Call':
     strike = st.sidebar.selectbox(f'Select strike (ref price = {ref_price:.2f})', (call_chain['strike'].tolist()),
                                   format_func = lambda x: f'{x}  ({x / ref_price:.1%})')
@@ -228,3 +228,4 @@ fig = plot_payoff()
 st.plotly_chart(fig)
 
 st.write(f'Stock summary on [yahoo!] (https://finance.yahoo.com/quote/{ticker})')
+st.metric("Solver Vol", f'{solver_vol:.0%}')
