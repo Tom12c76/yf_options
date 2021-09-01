@@ -78,8 +78,6 @@ def calc_opt_hist(strategy, strike):
     min_result = minimize(minimize_me, 0.15, method='Nelder-Mead')
     if min_result.success:
         solver_vol = min_result.x[0]
-        # st.write(f'{strategy} / {strike} / {lastPrice} solver vol = {solver_vol:.1%} / from listed {impliedVolatility:.1%}',
-        #          BlackSholes(strategy, ref_price, strike, (exp_date - ref_date).days / 365, riskfree, solver_vol))
     else:
         st.warning('Solver could not determine impl vol!')
         st.stop()
@@ -141,13 +139,13 @@ def get_fig():
             o = (p/min(pnl))*0.66 + 0.34
 
         fig.add_trace(go.Scatter(x=[tx_date, exp_date], y=[l, l], mode='lines+text', opacity=o,
-                                 text=['', f'<b>{(l/ref_price_tx_date-1):,.1%}  ({p/(tx_price*lots*mult)*ls:.1f}x)'],
+                                 text=['', f'<b>{l:,.2f}  {(l/ref_price_tx_date-1):+,.1%}'],
                                  textposition='bottom center', textfont=dict(color=color), showlegend=False,
                                  line={'color': color, 'width': width, 'dash': 'dashdot'}),
                       row=1, col=1)
 
         fig.add_trace(go.Scatter(x=[min(pnl), max(pnl)], y=[l, l], mode='lines+text', name='',
-                                 text=['', f'<b>${p:,.0f}'], textposition='bottom center', textfont=dict(color=color),
+                                 text=['', f'<b>${p:,.0f}  ({p/(tx_price*lots*mult)*ls:.1f}x)'], textposition='bottom center', textfont=dict(color=color),
                                  showlegend=False, opacity=o, line={'color': color, 'width': width, 'dash': 'dashdot'}),
                       row=1, col=2)
 
@@ -157,7 +155,7 @@ def get_fig():
                                  line={'color': color, 'width': width, 'dash': 'dashdot'}),
                       row=2, col=1)
 
-        fig.add_trace(go.Scatter(x=[0, max(bell)], y=[l, l],
+        fig.add_trace(go.Scatter(x=[0, max(bell)*1.25], y=[l, l],
                                  text=['', f'<b>p{1 - norm.cdf((abs(l / ref_price_tx_date - 1)) / (solver_vol * np.sqrt(td2e / 252))):.0%}'],
                                  textfont=dict(color=color), textposition='bottom left',
                                  showlegend=False, mode='lines+text', opacity=o, name='',
@@ -168,8 +166,8 @@ def get_fig():
                              line={'color': snsblue, 'width': 2}, opacity=0.7),
                   row=1, col=2)
 
-    padding = (max(pnl)-min(pnl))/10
-    fig.add_trace(go.Scatter(x=[min(pnl)-padding, max(pnl)+padding],
+    padding = (max(pnl)-min(pnl))/5
+    fig.add_trace(go.Scatter(x=[min(pnl), max(pnl)+padding],
                              y=[levels[0], levels[0]],
                              name='', opacity=0.0, showlegend=False),
                   row=1, col=2)
@@ -195,10 +193,18 @@ def get_fig():
                                  line={'color': snsorange, 'width': 2.5}, opacity=0.4),
                       row=1, col=1)
 
+    rol_ret = stock_hist[ticker] / stock_hist[ticker].shift(td2e) - 1
+    fig.add_trace(
+        go.Scatter(x=rol_ret.index, y=rol_ret,
+                   name=str(td2e) + ' td Rol Ret', connectgaps=True, line={'color': snsgrey, 'width': 1},
+                   fill='tozeroy'),
+        row=2, col=1)
+
     rol_vol = np.log(stock_hist[ticker]/stock_hist[ticker].shift(1)).rolling(td2e).std()*np.sqrt(td2e)
     fig.add_trace(go.Scatter(x=rol_vol.index, y=rol_vol,
                              name=str(td2e) + ' td Rol Vol', connectgaps=True, line={'color': snsorange, 'width': 1.25}),
                   row=2, col=1)
+
     fig.add_trace(go.Scatter(x=rol_vol.index, y=-rol_vol,
                              name=str(td2e) + ' td Rol Vol', connectgaps=True,
                              line={'color': snsorange, 'width': 1.25}),
@@ -209,11 +215,6 @@ def get_fig():
                              line={'color': snsorange, 'width': 1.25}),
                   row=2, col=1)
 
-    fig.add_trace(
-        go.Scatter(x=stock_hist.index, y=stock_hist[ticker] / stock_hist[ticker].shift(td2e) - 1,
-                   name=str(td2e) + ' td Rol Ret', connectgaps=True, line={'color': snsgrey, 'width': 1},
-                   fill='tozeroy'),
-        row=2, col=1)
 
     fig.update_xaxes(zerolinecolor='grey', zerolinewidth=1.25, col=2, row=1)
     fig.update_yaxes(zerolinecolor='grey', zerolinewidth=1.25, tickformat='%', col=1, row=2)
@@ -226,39 +227,89 @@ def get_fig():
 
 # BODY
 
-ticker = st.sidebar.text_input('Enter US stock ticker','AAPL')
-stock_hist = get_stock_hist(ticker)
-ref_date = stock_hist.index.max().date()
-ref_price = stock_hist.iloc[-1][0]
+from_file = st.sidebar.checkbox('Positions from file', value=False)
 
-exp_dates = get_exp_dates(ticker)
-exp_date = st.sidebar.selectbox('Pick exp date', exp_dates, index=len(exp_dates)-1)
-exp_date = datetime.datetime.strptime(exp_date, '%Y-%m-%d').date()
+if from_file:
+    placeholder = st.empty()
+    with placeholder.container():
+        pos_file = st.file_uploader("Drag/drop pos file here:", type=['csv'], help='Must be a CSV file please!')
+        if not pos_file:
+            st.warning('Waiting for your file...')
+            st.stop()
+        st.success('Great well done')
 
-call_chain, put_chain = get_chains(ticker)
-hide_itm = st.sidebar.checkbox('Hide ITM strikes', value=True)
-if hide_itm:
-    call_chain = call_chain[call_chain['inTheMoney'] == False]
-    put_chain = put_chain[put_chain['inTheMoney'] == False]
+    df = pd.read_csv(pos_file, parse_dates=[1, 9], na_values='<NA>')
+    df['exp_date'] = df['exp_date'].dt.date
+    df['tx_date'] = df['tx_date'].dt.date
+    placeholder.empty()
+    df.dropna(how='all', inplace=True)
+    df['description'] = df['ticker'] + ' - ' + df['long_short'] + ' - ' + df['strategy']
 
-call_strikes = st.sidebar.multiselect('Call strikes (max 2)', call_chain['strike'], call_chain['strike'].iloc[0])
-call_strikes = sorted(call_strikes)
-# format_func = lambda x: f'{x} ({x / ref_price:.0%})'
-put_strikes = st.sidebar.multiselect('Put strikes (max 2)', put_chain[::-1]['strike'])
-put_strikes = sorted(put_strikes, reverse=True)
+    pos_chosen = st.sidebar.selectbox('Pick one option trade:', df['description'])
+    ticker, exp_date, long_short, lots, strategy, call_0, call_1, put_0, put_1, tx_date, tx_price, xxx = df[df['description'] == pos_chosen].values.tolist()[0]
 
-long_short = st.sidebar.radio('Long or Short', ('Long', 'Short'))
-if long_short == 'Long':
-    ls = 1
+    if long_short == 'Long':
+        ls = 1
+    else:
+        ls = -1
+
+    if not pd.isnull(call_0):
+        if not pd.isnull(call_1):
+            call_strikes = [call_0, call_1]
+        else:
+            call_strikes = [call_0]
+    else:
+        call_strikes = []
+        
+    if not pd.isnull(put_0):
+        if not pd.isnull(put_1):
+            put_strikes = [put_0, put_1]
+        else:
+            put_strikes = [put_0]
+    else:
+        put_strikes = []
+
+    stock_hist = get_stock_hist(ticker)
+    ref_date = stock_hist.index.max().date()
+    ref_price = stock_hist.iloc[-1][0]
+    call_chain, put_chain = get_chains(ticker)
+    mult = 100
+
 else:
-    ls = -1
+    ticker = st.sidebar.text_input('Enter US stock ticker','AAPL')
+    stock_hist = get_stock_hist(ticker)
+    ref_date = stock_hist.index.max().date()
+    ref_price = stock_hist.iloc[-1][0]
 
-lots = st.sidebar.select_slider('N of lots', [1, 5, 10, 20, 50, 100], 10) * ls
-mult = 100
+    exp_dates = get_exp_dates(ticker)
+    exp_date = st.sidebar.selectbox('Pick exp date', exp_dates, index=len(exp_dates)-1)
+    exp_date = datetime.datetime.strptime(exp_date, '%Y-%m-%d').date()
 
-tx_date = st.sidebar.date_input('Transaction date override', ref_date)
-if tx_date > ref_date:
-    tx_date = ref_date
+    call_chain, put_chain = get_chains(ticker)
+    hide_itm = st.sidebar.checkbox('Hide ITM strikes', value=True)
+    if hide_itm:
+        call_chain = call_chain[call_chain['inTheMoney'] == False]
+        put_chain = put_chain[put_chain['inTheMoney'] == False]
+
+    call_strikes = st.sidebar.multiselect('Call strikes (max 2)', call_chain['strike'], call_chain['strike'].iloc[0])
+    call_strikes = sorted(call_strikes)
+    # format_func = lambda x: f'{x} ({x / ref_price:.0%})'
+    put_strikes = st.sidebar.multiselect('Put strikes (max 2)', put_chain[::-1]['strike'])
+    put_strikes = sorted(put_strikes, reverse=True)
+
+    long_short = st.sidebar.radio('Long or Short', ('Long', 'Short'))
+    if long_short == 'Long':
+        ls = 1
+    else:
+        ls = -1
+
+    lots = st.sidebar.select_slider('N of lots', [1, 5, 10, 20, 50, 100], 10) * ls
+    mult = 100
+
+    tx_date = st.sidebar.date_input('Transaction date override', ref_date)
+    if tx_date > ref_date:
+        tx_date = ref_date
+
 cd2e = (exp_date - tx_date).days
 td2e = cd2e//7*5 + cd2e%7
 
@@ -270,7 +321,9 @@ if len(call_strikes) == 1 and len(put_strikes) == 0:
     opt_hist['breakeven'] = call_strikes[0] + opt_hist['bs']
     i = opt_hist.index.get_loc(pd.to_datetime(tx_date), method='nearest')
     tx_price_suggest = round(opt_hist.iloc[i]['bs'], 2)
-    tx_price = st.sidebar.number_input('Transaction  price override', min_value=0.01, max_value=None, value=max(tx_price_suggest, 0.01))
+    if not from_file:
+        tx_price = st.sidebar.number_input('Transaction  price override', min_value=0.01, max_value=None,
+                                           value=max(tx_price_suggest, 0.01))
     levels = call_strikes[0] + np.multiply([-4, 0, 1, 2, 3, 4], tx_price)
     levels_short = levels[1:]
     level_tx = call_strikes[0] + tx_price
@@ -279,10 +332,7 @@ if len(call_strikes) == 1 and len(put_strikes) == 0:
     pnl_short = pnl[1:]
     pnl_last = (lastPrice - tx_price) * lots * mult
     col_title_1 = f'<b>{long_short} {lots} lots of the {exp_date:%d-%b-%y}<br>{ticker}  {call_strikes[0]}  strike  {strategy}s  @  {tx_price:.2f}  [now {lastPrice:.2f}]'
-    data = {'long_short':long_short, 'lots':lots, 'exp_date':exp_date.isoformat(), 'ticker':ticker,
-            'call_0':call_strikes[0],'call_1':np.NaN,
-            'put_0':np.NaN,'put_1':np.NaN,
-            'strategy':strategy, 'tx_date':tx_date, 'tx_price':tx_price}
+    pos_strikes = {'call_0': call_strikes[0], 'call_1': np.NaN, 'put_0': np.NaN, 'put_1': np.NaN}
 elif len(call_strikes) == 2 and len(put_strikes) == 0:
     strategy = 'Call'
     #lower strike
@@ -300,7 +350,9 @@ elif len(call_strikes) == 2 and len(put_strikes) == 0:
 
     i = opt_hist.index.get_loc(pd.to_datetime(tx_date), method='nearest')
     tx_price_suggest = round(opt_hist.iloc[i]['bs'], 2)
-    tx_price = st.sidebar.number_input('Transaction  price override', min_value=0.01, max_value=None, value=max(tx_price_suggest, 0.01))
+    if not from_file:
+        tx_price = st.sidebar.number_input('Transaction  price override', min_value=0.01, max_value=None,
+                                           value=max(tx_price_suggest, 0.01))
 
     strategy = 'Call Spread'
     spread = call_strikes[1] - call_strikes[0]
@@ -314,6 +366,7 @@ elif len(call_strikes) == 2 and len(put_strikes) == 0:
     pnl_short = pnl[1:4]
     pnl_last = (lastPrice - tx_price) * lots * mult
     col_title_1 = f'<b>{long_short} {lots} lots of the {exp_date:%d-%b-%y}<br>{ticker}  {call_strikes[0]}/{call_strikes[1]}  strike  {strategy}  @  {tx_price:.2f}  [now {lastPrice:.2f}]'
+    pos_strikes = {'call_0': call_strikes[0], 'call_1': call_strikes[1], 'put_0': np.NaN, 'put_1': np.NaN}
 elif len(call_strikes) == 0 and len(put_strikes) == 1:
     strategy = 'Put'
     lastPrice, impliedVolatility, pcf = put_chain[put_chain['strike']==put_strikes[0]][['lastPrice', 'impliedVolatility', 'pcf']].values.tolist()[0]
@@ -322,8 +375,9 @@ elif len(call_strikes) == 0 and len(put_strikes) == 1:
     opt_hist['breakeven'] = put_strikes[0] - opt_hist['bs']
     i = opt_hist.index.get_loc(pd.to_datetime(tx_date), method='nearest')
     tx_price_suggest = round(opt_hist.iloc[i]['bs'], 2)
-    tx_price = st.sidebar.number_input('Transaction  price override', min_value=0.01, max_value=None, value=max(tx_price_suggest, 0.01))
-
+    if not from_file:
+        tx_price = st.sidebar.number_input('Transaction  price override', min_value=0.01, max_value=None,
+                                           value=max(tx_price_suggest, 0.01))
     levels = put_strikes[0] - np.multiply([-4, 0, 1, 2, 3, 4], tx_price)
     pnl = np.multiply([-1, -1, 0, 1, 2, 3], tx_price) * lots * mult
     levels_short = levels[1:]
@@ -332,6 +386,7 @@ elif len(call_strikes) == 0 and len(put_strikes) == 1:
     pnl_short = pnl[1:]
     pnl_last = (lastPrice-tx_price) * lots * mult
     col_title_1 = f'<b>{long_short} {lots} lots of the {exp_date:%d-%b-%y}<br>{ticker}  {put_strikes[0]}  strike  {strategy}s  @  {tx_price:.2f}  [now {lastPrice:.2f}]'
+    pos_strikes = {'call_0': np.NaN, 'call_1': np.NaN, 'put_0': put_strikes[0], 'put_1': np.NaN}
 elif len(call_strikes) == 0 and len(put_strikes) == 2:
     strategy = 'Put'
     # higher strike
@@ -348,8 +403,9 @@ elif len(call_strikes) == 0 and len(put_strikes) == 2:
     opt_hist['breakeven'] = put_strikes[0] - opt_hist['bs']
     i = opt_hist.index.get_loc(pd.to_datetime(tx_date), method='nearest')
     tx_price_suggest = round(opt_hist.iloc[i]['bs'], 2)
-    tx_price = st.sidebar.number_input('Transaction  price override', min_value=0.01, max_value=None,
-                                       value=max(tx_price_suggest, 0.01))
+    if not from_file:
+        tx_price = st.sidebar.number_input('Transaction  price override', min_value=0.01, max_value=None,
+                                           value=max(tx_price_suggest, 0.01))
     strategy = 'Put Spread'
     spread = put_strikes[0] - put_strikes[1]
     lastPrice = put_chain[put_chain['strike'] == put_strikes[0]]['lastPrice'].item() - \
@@ -363,6 +419,7 @@ elif len(call_strikes) == 0 and len(put_strikes) == 2:
     pnl_short = pnl[1:4]
     pnl_last = (lastPrice - tx_price) * lots * mult
     col_title_1 = f'<b>{long_short} {lots} lots of the {exp_date:%d-%b-%y}<br>{ticker}  {put_strikes[0]}/{put_strikes[1]}  strike  {strategy}  @  {tx_price:.2f}  [now {lastPrice:.2f}]'
+    pos_strikes = {'call_0': np.NaN, 'call_1': np.NaN, 'put_0': put_strikes[0], 'put_1': put_strikes[1]}
 elif len(call_strikes) == 1 and len(put_strikes) == 1:
     # higher strike
     strategy = 'Call'
@@ -380,8 +437,9 @@ elif len(call_strikes) == 1 and len(put_strikes) == 1:
     opt_hist['breakeven lower'] = put_strikes[0] - opt_hist['bs']
     i = opt_hist.index.get_loc(pd.to_datetime(tx_date), method='nearest')
     tx_price_suggest = round(opt_hist.iloc[i]['bs'], 2)
-    tx_price = st.sidebar.number_input('Transaction  price override', min_value=0.01, max_value=None,
-                                       value=max(tx_price_suggest, 0.01))
+    if not from_file:
+        tx_price = st.sidebar.number_input('Transaction  price override', min_value=0.01, max_value=None,
+                                           value=max(tx_price_suggest, 0.01))
     if call_strikes[0] == put_strikes[0]:
         strategy = 'Straddle'
     elif call_strikes[0] > put_strikes[0]:
@@ -406,6 +464,7 @@ elif len(call_strikes) == 1 and len(put_strikes) == 1:
         col_title_1 = f'<b>{long_short} {lots} lots of the {exp_date:%d-%b-%y}<br>{ticker}  {call_strikes[0]}  strike  {strategy}s  @  {tx_price:.2f}  [now {lastPrice:.2f}]'
     else:
         col_title_1 = f'<b>{long_short} {lots} lots of the {exp_date:%d-%b-%y}<br>{ticker}  {put_strikes[0]}/{call_strikes[0]}  strike  {strategy}  @  {tx_price:.2f}  [now {lastPrice:.2f}]'
+    pos_strikes = {'call_0': call_strikes[0], 'call_1': np.NaN, 'put_0': put_strikes[0], 'put_1': np.NaN}
 else:
     st.error('Holy :poop: I can only handle calls, puts, vertical spreads and straddles for now :man-shrugging:')
     st.stop()
@@ -431,4 +490,12 @@ with col2:
 
 st.write(f'Stock summary on [yahoo!] (https://finance.yahoo.com/quote/{ticker})')
 
-# st.write(pd.DataFrame(data=data, index=[0]).iloc[0].tolist())
+if not from_file:
+    pos_details = {'ticker': ticker, 'exp_date': exp_date.isoformat(), 'long_short': long_short, 'lots': lots,
+                   'strategy': strategy, 'tx_date': tx_date.isoformat(), 'tx_price': tx_price}
+    df_pos = pd.DataFrame(data={**pos_details, **pos_strikes}, index=[0])
+    df_pos_cols = ['ticker', 'exp_date', 'long_short', 'lots', 'strategy', 'call_0', 'call_1', 'put_0', 'put_1', 'tx_date', 'tx_price']
+    df_pos = df_pos[df_pos_cols]
+
+    st.markdown('<br><br><br>', unsafe_allow_html=True)
+    st.markdown(df_pos.to_html(), unsafe_allow_html=True)
