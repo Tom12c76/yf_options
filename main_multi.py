@@ -9,8 +9,8 @@ from scipy.optimize import minimize
 from scipy.stats import norm
 
 # LAYOUT
-st.set_page_config(page_title="TC's Opt Screen", layout="wide")
-st.sidebar.header("TC's Option Screener :sunglasses:")
+st.set_page_config(page_title="TC's Option Viz", layout="wide")
+st.sidebar.header("TC's Option Viz :sunglasses:")
 
 # CONSTANTS
 snsgreen, snsorange, snsred, snsblue, snsgrey = ['#55a868','#ff7f0e','#c44e52','#4c72b0','#8c8c8c']
@@ -206,7 +206,7 @@ def get_fig():
                   row=2, col=1)
 
     fig.add_trace(go.Scatter(x=rol_vol.index, y=-rol_vol,
-                             name=str(td2e) + ' td Rol Vol', connectgaps=True,
+                             name='', connectgaps=True, showlegend=False,
                              line={'color': snsorange, 'width': 1.25}),
                   row=2, col=1)
 
