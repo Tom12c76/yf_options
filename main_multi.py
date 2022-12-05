@@ -94,7 +94,7 @@ def get_fig():
     col_title_2 = f'<b>Current P&L = {pnl_last:,.0f}'
     fig = make_subplots(rows=2, cols=3, shared_xaxes=True, shared_yaxes=True,
                         vertical_spacing=0.05, horizontal_spacing=0.01,
-                        row_heights=[2, 1], column_widths=[8, 2, 0.5],
+                        row_heights=[3, 1], column_widths=[10, 2, 1],
                         column_titles=[col_title_1, col_title_2, '<b>Prob'],
                         subplot_titles = ('', '', '', '<b>Rol Ret / Rol Vol / Backtest'))
 
@@ -220,7 +220,7 @@ def get_fig():
     fig.update_yaxes(row=2, col=1, zerolinecolor='grey', zerolinewidth=1.25, tickformat='.0%')
 
     fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), template='seaborn', plot_bgcolor='#F0F2F6')
-    fig.update_layout(height=700, width=1200)  #, paper_bgcolor='yellow')
+    fig.update_layout(height=210*3.7, width=297*3.7)  #, paper_bgcolor='yellow')
     fig.update_layout(legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01))
 
     return fig
@@ -325,7 +325,7 @@ if len(call_strikes) == 1 and len(put_strikes) == 0:
     if not from_file:
         tx_price = st.sidebar.number_input('Transaction  price override', min_value=0.01, max_value=None,
                                            value=max(tx_price_suggest, 0.01))
-    tx_price = 9
+    # tx_price = 9
     levels = call_strikes[0] + np.multiply([-4, 0, 1, 2, 3, 4], tx_price)
     levels_short = levels[1:]
     level_tx = call_strikes[0] + tx_price
@@ -477,7 +477,7 @@ range = np.linspace(range_from, range_to, num=100)
 ref_price_tx_date = opt_hist.iloc[i][0]
 bell = norm.pdf((range/ref_price_tx_date-1)/(solver_vol*np.sqrt(cd2e/365)))
 
-col1, col2 = st.columns((8, 1))
+col1, col2 = st.columns((9, 2))
 
 with col1:
     fig = get_fig()
