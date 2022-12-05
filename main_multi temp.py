@@ -103,12 +103,12 @@ def get_fig():
                   row=1, col=1)
 
     fig.add_trace(go.Scatter(x=[tx_date, ref_date], y=[ref_price_tx_date, ref_price], mode='markers',
-                             showlegend=False, line={'color': snsblue, 'width': 2.5}, opacity=1),
+                             showlegend=True, name="ref px", line={'color': snsblue, 'width': 2.5}, opacity=1),
                   row=1, col=1)
 
-    fig.add_trace(go.Scatter(x=stock_hist.index, y=stock_hist[ticker].rolling(td2e).mean(),
-                             name=str(td2e)+' td SMA', visible='legendonly', line={'color':snsgrey,'width':1}),
-                  row=1, col=1)
+    # fig.add_trace(go.Scatter(x=stock_hist.index, y=stock_hist[ticker].rolling(td2e).mean(),
+    #                          name=str(td2e)+' td SMA',line={'color':snsgrey,'width':1}),
+    #               row=1, col=1)
 
     fig.add_trace(go.Scatter(x=opt_hist[opt_hist['cd2e'] <= (cd2e + 20)].index,
                              y=opt_hist[opt_hist['cd2e'] <= (cd2e + 20)]['breakeven'],
@@ -121,7 +121,7 @@ def get_fig():
                   row=1, col=3)
 
     fig.add_trace(go.Scatter(x=[max(bell)], y=[ref_price_tx_date], mode='markers',
-                             showlegend=False, line={'color': snsblue, 'width': 2.5}, opacity=1),
+                             showlegend=True, name="ref P", line={'color': snsblue, 'width': 2.5}, opacity=1),
                   row=1, col=3)
 
     for l, p in zip(levels_short, pnl_short):
@@ -140,25 +140,25 @@ def get_fig():
 
         fig.add_trace(go.Scatter(x=[tx_date, exp_date], y=[l, l], mode='lines+text', opacity=o,
                                  text=['', f'<b>{l:,.2f}  {(l/ref_price_tx_date-1):+,.1%}'],
-                                 textposition='bottom center', textfont=dict(color=color), showlegend=False,
+                                 textposition='bottom center', textfont=dict(color=color), showlegend=True, name=l,
                                  line={'color': color, 'width': width, 'dash': 'dashdot'}),
                       row=1, col=1)
 
-        fig.add_trace(go.Scatter(x=[min(pnl), max(pnl)], y=[l, l], mode='lines+text', name='',
+        fig.add_trace(go.Scatter(x=[min(pnl), max(pnl)], y=[l, l], mode='lines+text', name=p,
                                  text=['', f'<b>${p:,.0f}  ({p/(tx_price*lots*mult)*ls:.1f}x)'], textposition='bottom center', textfont=dict(color=color),
-                                 showlegend=False, opacity=o, line={'color': color, 'width': width, 'dash': 'dashdot'}),
+                                 showlegend=True, opacity=o, line={'color': color, 'width': width, 'dash': 'dashdot'}),
                       row=1, col=2)
 
         fig.add_trace(go.Scatter(x=[stock_hist.index.min(), exp_date],
                                  y=[l / stock_hist[ticker].iloc[-1] - 1, l / stock_hist[ticker].iloc[-1] - 1],
-                                 showlegend=False, mode='lines', opacity=o,
+                                 showlegend=True, mode='lines', opacity=o, name='B/E%',
                                  line={'color': color, 'width': width, 'dash': 'dashdot'}),
                       row=2, col=1)
 
         fig.add_trace(go.Scatter(x=[0, max(bell)*1.25], y=[l, l],
                                  text=['', f'<b>p{1 - norm.cdf((abs(l / ref_price_tx_date - 1)) / (solver_vol * np.sqrt(td2e / 252))):.0%}'],
                                  textfont=dict(color=color), textposition='bottom left',
-                                 showlegend=False, mode='lines+text', opacity=o, name='',
+                                 showlegend=True, mode='lines+text', opacity=o, name='P',
                                  line={'color': color, 'width': width, 'dash': 'dashdot'}),
                       row=1, col=3)
 
@@ -172,12 +172,12 @@ def get_fig():
                              name='', opacity=0.0, showlegend=False),
                   row=1, col=2)
 
-    fig.add_trace(go.Scatter(x=[tx_date, ref_date], y=[level_tx, level_last],
-                             showlegend=False, mode='markers', marker=dict(color=snsorange), opacity=1),
+    fig.add_trace(go.Scatter(x=[tx_date, ref_date], y=[level_tx, level_last], name='op px last',
+                             showlegend=True, mode='markers', marker=dict(color=snsorange), opacity=1),
                   row=1, col=1)
 
-    fig.add_trace(go.Scatter(x=[0, pnl_last], y=[level_tx, level_last],
-                             showlegend=False, mode='lines+markers', marker=dict(color=snsorange), opacity=1),
+    fig.add_trace(go.Scatter(x=[0, pnl_last], y=[level_tx, level_last], name='op pnl last',
+                             showlegend=True, mode='lines+markers', marker=dict(color=snsorange), opacity=1),
                   row=1, col=2)
 
     if strategy in ['Straddle', 'Strangle']:
@@ -196,8 +196,8 @@ def get_fig():
     rol_ret = stock_hist[ticker] / stock_hist[ticker].shift(td2e) - 1
     fig.add_trace(
         go.Scatter(x=rol_ret.index, y=rol_ret,
-                   name=str(td2e) + ' td Rol Ret', connectgaps=True, line={'color': snsgrey, 'width': 1},
-                   fill='tozeroy'),
+                   name=str(td2e) + ' td Rol Ret', connectgaps=True,
+                   line={'color': snsgrey, 'width': 1}, fill='tozeroy'),
         row=2, col=1)
 
     rol_vol = np.log(stock_hist[ticker]/stock_hist[ticker].shift(1)).rolling(td2e).std()*np.sqrt(td2e)
@@ -206,7 +206,7 @@ def get_fig():
                   row=2, col=1)
 
     fig.add_trace(go.Scatter(x=rol_vol.index, y=-rol_vol,
-                             name='', connectgaps=True, showlegend=False,
+                             name=str(td2e) + ' td Rol Vol', connectgaps=True, showlegend=True,
                              line={'color': snsorange, 'width': 1.25}),
                   row=2, col=1)
 
@@ -216,12 +216,12 @@ def get_fig():
                   row=2, col=1)
 
 
-    fig.update_xaxes(row=1, col=2, zerolinecolor='grey', zerolinewidth=1.25)
-    fig.update_yaxes(row=2, col=1, zerolinecolor='grey', zerolinewidth=1.25, tickformat='.0%')
-
+    fig.update_xaxes(zerolinecolor='grey', zerolinewidth=1.25, col=2, row=1)
+    fig.update_yaxes(zerolinecolor='grey', zerolinewidth=1.25, tickformat='.0%', col=1, row=2)
     fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), template='seaborn', plot_bgcolor='#F0F2F6')
     fig.update_layout(height=700, width=1200)  #, paper_bgcolor='yellow')
-    fig.update_layout(legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01))
+    fig.update_layout(legend=dict(yanchor="top", y=1, xanchor="left", x=1.02, itemclick="toggle"))
+    fig.update_layout(showlegend=False)
 
     return fig
 
@@ -323,9 +323,9 @@ if len(call_strikes) == 1 and len(put_strikes) == 0:
     i = opt_hist.index.get_loc(pd.to_datetime(tx_date), method='nearest')
     tx_price_suggest = round(opt_hist.iloc[i]['bs'], 2)
     if not from_file:
+        st.write('not from file')
         tx_price = st.sidebar.number_input('Transaction  price override', min_value=0.01, max_value=None,
                                            value=max(tx_price_suggest, 0.01))
-    tx_price = 9
     levels = call_strikes[0] + np.multiply([-4, 0, 1, 2, 3, 4], tx_price)
     levels_short = levels[1:]
     level_tx = call_strikes[0] + tx_price
@@ -462,7 +462,7 @@ elif len(call_strikes) == 1 and len(put_strikes) == 1:
     pnl = np.multiply([tx_price, 0, -tx_price, -tx_price, 0, tx_price], lots*mult)
     pnl_last = (lastPrice - tx_price) * lots * mult
     pnl_short = pnl
-    if strategy=="Straddle":
+    if strategy == "Straddle":
         col_title_1 = f'<b>{long_short} {lots} lots of the {exp_date:%d-%b-%y}<br>{ticker}  {call_strikes[0]}  strike  {strategy}s  @  {tx_price:.2f}  [now {lastPrice:.2f}]'
     else:
         col_title_1 = f'<b>{long_short} {lots} lots of the {exp_date:%d-%b-%y}<br>{ticker}  {put_strikes[0]}/{call_strikes[0]}  strike  {strategy}  @  {tx_price:.2f}  [now {lastPrice:.2f}]'
