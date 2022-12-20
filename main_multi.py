@@ -3,6 +3,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import datetime
+import io
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy.optimize import minimize
@@ -484,6 +485,9 @@ with col1:
     st.plotly_chart(fig)
 
 with col2:
+    st.write("")
+    st.write("")
+    st.write("")
     st.metric(ticker+' last', f'${ref_price:.2f}')
     st.metric('option last', f'{lastPrice:.2f}')
     # st.metric('ivol yfinance', f'{impliedVolatility:.0%}')
@@ -491,6 +495,9 @@ with col2:
     st.metric('P&L', f'${pnl_last:,.0f}')
 
 st.write(f'Stock summary on [yahoo!] (https://finance.yahoo.com/quote/{ticker})')
+buffer = io.BytesIO()
+fig.write_image(file=buffer, format="pdf")
+st.download_button("donwnload chart", data=buffer, file_name='prova.pdf') #mime=None, key=None, help=None, on_click=None, args=None, kwargs=None, *, disabled=False)
 
 if not from_file:
     pos_details = {'ticker': ticker, 'exp_date': exp_date.isoformat(), 'long_short': long_short, 'lots': lots,
@@ -498,6 +505,6 @@ if not from_file:
     df_pos = pd.DataFrame(data={**pos_details, **pos_strikes}, index=[0])
     df_pos_cols = ['ticker', 'exp_date', 'long_short', 'lots', 'strategy', 'call_0', 'call_1', 'put_0', 'put_1', 'tx_date', 'tx_price']
     df_pos = df_pos[df_pos_cols]
-
+    st.download_button('download position csv', data=df_pos.to_csv(index=False).encode('utf-8'), file_name='pos.csv')
     st.markdown('<br><br><br>', unsafe_allow_html=True)
     st.markdown(df_pos.to_html(), unsafe_allow_html=True)
