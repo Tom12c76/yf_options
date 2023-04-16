@@ -158,7 +158,7 @@ def get_fig():
 
         fig.add_trace(go.Scatter(x=[0, max(bell)*1.25], y=[l, l],
                                  text=['', f'<b>p{1 - norm.cdf((abs(l / ref_price_tx_date - 1)) / (solver_vol * np.sqrt(td2e / 252))):.0%}'],
-                                 textfont=dict(color=color), textposition='bottom left',
+                                 textfont=dict(color=color), textposition='bottom right',
                                  showlegend=False, mode='lines+text', opacity=o, name='',
                                  line={'color': color, 'width': width, 'dash': 'dashdot'}),
                       row=1, col=3)
@@ -218,6 +218,7 @@ def get_fig():
 
 
     fig.update_xaxes(row=1, col=2, zerolinecolor='grey', zerolinewidth=1.25)
+    fig.update_xaxes(row=1, col=3, autorange = "reversed")
     fig.update_yaxes(row=2, col=1, zerolinecolor='grey', zerolinewidth=1.25, tickformat='.0%')
 
     fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), template='seaborn', plot_bgcolor='#F0F2F6')
