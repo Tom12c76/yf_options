@@ -59,7 +59,9 @@ def get_exp_dates(ticker):
 
 
 def get_chains(ticker):
-    call_chain, put_chain = yf.Ticker(ticker).option_chain(str(exp_date))
+    opt = yf.Ticker(ticker).option_chain(str(exp_date))
+    call_chain = opt.calls
+    put_chain = opt.puts
     call_chain['pcf'] = 1
     put_chain['pcf'] = -1
     return call_chain, put_chain
