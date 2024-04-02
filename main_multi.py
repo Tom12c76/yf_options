@@ -223,8 +223,8 @@ def get_fig():
     fig.update_xaxes(row=1, col=3, autorange = "reversed")
     fig.update_yaxes(row=2, col=1, zerolinecolor='grey', zerolinewidth=1.25, tickformat='.0%')
 
-    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), template='seaborn', plot_bgcolor='#F0F2F6')
-    fig.update_layout(height=210*3.7, width=297*3.7)  #, paper_bgcolor='yellow')
+    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0, pad=1), template='seaborn', plot_bgcolor='#F0F2F6')
+    fig.update_layout(height=210*3.7, width=297*3.7, paper_bgcolor=None)
     fig.update_layout(legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01))
 
     return fig
@@ -324,7 +324,8 @@ if len(call_strikes) == 1 and len(put_strikes) == 0:
         call_chain[call_chain['strike'] == call_strikes[0]][['lastPrice', 'impliedVolatility', 'pcf']].values.tolist()[0]
     opt_hist, solver_vol = calc_opt_hist(strategy='Call', strike=call_strikes[0])
     opt_hist['breakeven'] = call_strikes[0] + opt_hist['bs']
-    i = opt_hist.index.get_loc(pd.to_datetime(tx_date), method='nearest')
+    #i = opt_hist.index.get_loc(pd.to_datetime(tx_date), method='nearest')
+    i = opt_hist.index.get_indexer([pd.to_datetime(tx_date)], method='nearest')[0]
     tx_price_suggest = round(opt_hist.iloc[i]['bs'], 2)
     if not from_file:
         tx_price = st.sidebar.number_input('Transaction  price override', min_value=0.01, max_value=None,
@@ -354,7 +355,8 @@ elif len(call_strikes) == 2 and len(put_strikes) == 0:
     opt_hist['bs'] = opt_hist['bs'] -  opt_hist_higher['bs']
     opt_hist['breakeven'] = call_strikes[0] + opt_hist['bs']
 
-    i = opt_hist.index.get_loc(pd.to_datetime(tx_date), method='nearest')
+    #i = opt_hist.index.get_loc(pd.to_datetime(tx_date), method='nearest')
+    i = opt_hist.index.get_indexer([pd.to_datetime(tx_date)], method='nearest')[0]
     tx_price_suggest = round(opt_hist.iloc[i]['bs'], 2)
     if not from_file:
         tx_price = st.sidebar.number_input('Transaction  price override', min_value=0.01, max_value=None,
@@ -379,7 +381,8 @@ elif len(call_strikes) == 0 and len(put_strikes) == 1:
 
     opt_hist, solver_vol = calc_opt_hist(strategy='Put', strike=put_strikes[0])
     opt_hist['breakeven'] = put_strikes[0] - opt_hist['bs']
-    i = opt_hist.index.get_loc(pd.to_datetime(tx_date), method='nearest')
+    #i = opt_hist.index.get_loc(pd.to_datetime(tx_date), method='nearest')
+    i = opt_hist.index.get_indexer([pd.to_datetime(tx_date)], method='nearest')[0]
     tx_price_suggest = round(opt_hist.iloc[i]['bs'], 2)
     if not from_file:
         tx_price = st.sidebar.number_input('Transaction  price override', min_value=0.01, max_value=None,
@@ -407,7 +410,8 @@ elif len(call_strikes) == 0 and len(put_strikes) == 2:
     opt_hist = opt_hist_higher
     opt_hist['bs'] = opt_hist['bs'] - opt_hist_lower['bs']
     opt_hist['breakeven'] = put_strikes[0] - opt_hist['bs']
-    i = opt_hist.index.get_loc(pd.to_datetime(tx_date), method='nearest')
+    #i = opt_hist.index.get_loc(pd.to_datetime(tx_date), method='nearest')
+    i = opt_hist.index.get_indexer([pd.to_datetime(tx_date)], method='nearest')[0]
     tx_price_suggest = round(opt_hist.iloc[i]['bs'], 2)
     if not from_file:
         tx_price = st.sidebar.number_input('Transaction  price override', min_value=0.01, max_value=None,
@@ -441,7 +445,8 @@ elif len(call_strikes) == 1 and len(put_strikes) == 1:
     opt_hist['bs'] = opt_hist['bs'] + opt_hist_lower['bs']
     opt_hist['breakeven'] = call_strikes[0] + opt_hist['bs']
     opt_hist['breakeven lower'] = put_strikes[0] - opt_hist['bs']
-    i = opt_hist.index.get_loc(pd.to_datetime(tx_date), method='nearest')
+    #i = opt_hist.index.get_loc(pd.to_datetime(tx_date), method='nearest')
+    i = opt_hist.index.get_indexer([pd.to_datetime(tx_date)], method='nearest')[0]
     tx_price_suggest = round(opt_hist.iloc[i]['bs'], 2)
     if not from_file:
         tx_price = st.sidebar.number_input('Transaction  price override', min_value=0.01, max_value=None,
