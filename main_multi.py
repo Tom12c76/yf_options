@@ -1,3 +1,12 @@
+import sys
+
+# Print Python version
+print("Python version running on the Streamlit server:", sys.version)
+
+# Exit the script forcefully
+# sys.exit()
+
+
 import yfinance as yf
 import streamlit as st
 import numpy as np
