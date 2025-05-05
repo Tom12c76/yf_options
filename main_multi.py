@@ -21,29 +21,25 @@ riskfree = 0.005
 
 # @st.cache
 def get_stock_hist(ticker):
-    df_hist = yf.download(
-        tickers=ticker,
-        # valid periods: 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max
-        period="2y",
-        # valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo
-        interval="1d",
-        # group by ticker (to access via stk_px['SPY']), default is 'column'
-        group_by='column',
-        # adjust all OHLC automatically
-        auto_adjust=True,
-        # download pre/post regular market hours stk_px
-        prepost=False,
-        # use threads for mass downloading? (True/False/Integer)
-        threads=True,
-        # proxy URL scheme use use when downloading?
-        proxy=None)
-    if df_hist.empty:
-        raise NameError("You did not input a correct stock ticker! Try again.")
+    try:
+        df_hist = yf.download(
+            tickers=ticker,
+            period="2y",
+            interval="1d",
+            group_by='column',
+            auto_adjust=True,
+            prepost=False,
+            threads=True,
+            proxy=None)
+        if df_hist.empty:
+            return None
 
-    df_hist = df_hist['Close'].to_frame()
-    df_hist = df_hist.rename(columns={'Close':ticker})
-    df_hist = df_hist.sort_index(axis=0, ascending=True)
-    return df_hist
+        df_hist = df_hist['Close'].to_frame()
+        df_hist = df_hist.rename(columns={'Close':ticker})
+        df_hist = df_hist.sort_index(axis=0, ascending=True)
+        return df_hist
+    except Exception as e:
+        return None
 
 
 # @st.cache
@@ -275,6 +271,9 @@ if from_file:
         put_strikes = []
 
     stock_hist = get_stock_hist(ticker)
+    if stock_hist is None:
+        st.error(f"Invalid ticker: {ticker}. Please check your input file.")
+        st.stop()
     ref_date = stock_hist.index.max().date()
     ref_price = stock_hist.iloc[-1][0]
     call_chain, put_chain = get_chains(ticker)
@@ -283,6 +282,9 @@ if from_file:
 else:
     ticker = st.sidebar.text_input('Enter US stock ticker','AAPL')
     stock_hist = get_stock_hist(ticker)
+    if stock_hist is None:
+        st.error(f"Invalid ticker: {ticker}. Please enter a valid US stock ticker.")
+        st.stop()
     ref_date = stock_hist.index.max().date()
     ref_price = stock_hist.iloc[-1][0]
 
