@@ -32,6 +32,8 @@ def get_stock_hist(ticker):
             threads=True,
             proxy=None)
         if df_hist.empty:
+            # Provide a more specific warning if data is empty
+            st.warning(f"yfinance returned empty data for ticker: {ticker}. It might be delisted or there could be temporary issues.")
             return None
 
         df_hist = df_hist['Close'].to_frame()
@@ -39,6 +41,8 @@ def get_stock_hist(ticker):
         df_hist = df_hist.sort_index(axis=0, ascending=True)
         return df_hist
     except Exception as e:
+        # Print the actual exception for better debugging
+        st.error(f"An error occurred while fetching data for {ticker}: {e}")
         return None
 
 
