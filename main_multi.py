@@ -8,6 +8,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy.optimize import minimize
 from scipy.stats import norm
+from curl_cffi import requests # Add this import
 
 # LAYOUT
 st.set_page_config(page_title="TC's Opt Screen", layout="wide")
@@ -22,7 +23,8 @@ riskfree = 0.005
 # @st.cache
 def get_stock_hist(ticker):
     try:
-        df_hist = yf.download(
+        session = requests.Session(impersonate="chrome") # Create a session
+        df_hist_downloaded = yf.download( # Renamed to avoid confusion in the following logic
             tickers=ticker,
             period="2y",
             interval="1d",
@@ -30,14 +32,38 @@ def get_stock_hist(ticker):
             auto_adjust=True,
             prepost=False,
             threads=True,
-            proxy=None)
-        if df_hist.empty:
+            proxy=None,
+            session=session) # Pass the session here
+        
+        if df_hist_downloaded.empty:
             # Provide a more specific warning if data is empty
             st.warning(f"yfinance returned empty data for ticker: {ticker}. It might be delisted or there could be temporary issues.")
             return None
 
-        df_hist = df_hist['Close'].to_frame()
-        df_hist = df_hist.rename(columns={'Close':ticker})
+        close_data = df_hist_downloaded['Close']
+
+        if isinstance(close_data, pd.Series):
+            df_hist = close_data.to_frame()
+        elif isinstance(close_data, pd.DataFrame):
+            df_hist = close_data # It's already a DataFrame
+        else:
+            st.error(f"Unexpected data type for 'Close' prices for ticker {ticker}: {type(close_data)}")
+            return None
+        
+        # Now df_hist is a DataFrame.
+        # If its column is 'Close', it will be renamed to `ticker`.
+        # If its column is already `ticker` (and no 'Close' column exists), this rename is benign for that column.
+        df_hist = df_hist.rename(columns={'Close': ticker})
+        
+        # Ensure there's exactly one column and it's named as the ticker
+        if len(df_hist.columns) == 1 and df_hist.columns[0] != ticker:
+            # If the single column is not yet named `ticker` (e.g. rename didn't catch it or it was some other name)
+            df_hist = df_hist.rename(columns={df_hist.columns[0]: ticker})
+        elif len(df_hist.columns) != 1:
+            st.error(f"Processed data for {ticker} does not have a single column: {df_hist.columns}")
+            return None
+
+
         df_hist = df_hist.sort_index(axis=0, ascending=True)
         return df_hist
     except Exception as e:
